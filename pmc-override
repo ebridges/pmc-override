@@ -41,6 +41,18 @@ def suspend(token, resource, duration):
     pprint(response)
 
 
+def status(token, resource):
+  headers = {
+    'X-Auth-Token': token
+  }
+  url = f'https://console.parkmycloud.com/resources/paged?name={resource}'
+  
+  request = Request(url, headers=headers)
+  with urlopen(request) as response:
+    response = loads(response.read())
+    return response['data'][0]['state']
+
+
 def resource(token, resource):
   headers = {
     'X-Auth-Token': token
@@ -69,9 +81,10 @@ def auth(key, key_id):
 
 
 def main():    
-  parser = ArgumentParser()
+  parser = ArgumentParser(prog='pmc-override')
   parser.add_argument('-r', '--resource', required=True, choices=['development', 'staging'], help="Name of the resource whose schedule to override")
   parser.add_argument('-d', '--duration', type=int, default=2, help="Duration in hours to override schedule.")
+  parser.add_argument('-s', '--status', help="Status of given resource.")
   args = parser.parse_args()
 
   auth_key = environ['PMC_AUTH_KEY']
@@ -79,11 +92,13 @@ def main():
 
   token = auth(auth_key, auth_key_id)
 
-  resource_id = resource(token, args.resource)
-
-  suspend(token, resource_id, args.duration)
-
-  toggle(token, resource_id)
+  if args.status:
+    s = status(token, args.resource)
+    print(s)
+  else:
+    resource_id = resource(token, args.resource)
+    suspend(token, resource_id, args.duration)
+    toggle(token, resource_id)
   
 
 if __name__ == "__main__":
